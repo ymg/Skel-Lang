@@ -1,13 +1,14 @@
 module Parser where
 
-import           Text.Parsec
-import           Text.Parsec.String (Parser)
-
-import qualified Text.Parsec.Expr   as Ex
-import qualified Text.Parsec.Token  as Tok
-
+import           Debug.Trace
 import           Lexer
 import           Syntax
+
+import           Text.Parsec
+import qualified Text.Parsec.Expr   as Ex
+import           Text.Parsec.String (Parser)
+import qualified Text.Parsec.Token  as Tok
+
 
 binary s f assoc = Ex.Infix (reservedOp s >> return (BinOp f)) assoc
 
@@ -16,41 +17,40 @@ table = [[binary "*" Times Ex.AssocLeft,
         ,[binary "+" Plus Ex.AssocLeft,
           binary "-" Minus Ex.AssocLeft]]
 
-pars :: Parser Pars
-pars = many $ do
-     parList <- parT
-     return parList
+pars :: Parser Par
+pars = do
+     _par <- parT
+     reservedOp ";"
+     return _par
 
 parT :: Parser Par
 parT =  try parFun
-    <|> try parParallel
     <|> try parFarm
 
 parFarm :: Parser Par
 parFarm = do
   reserved "farm"
   num <- integer
-  par <- pars
+  par <- parT
   return $ Farm num par
 
 parFun :: Parser Par
 parFun = do
   reserved "func"
   name <- identifier
-  struc <- many struct
+  struc <- structs
   return $ Function name struc
 
-parParallel :: Parser Par
-parParallel = do
-  reserved "func"
-  name <- identifier
-  struc <- many struct
-  return $ Function name struc
+parParallel :: Parser Pars
+parParallel = many $ do
+  p <- parT
+  reservedOp "||"
+  return p
 
 int :: Parser Expr
 int = do
   n <- integer
-  return $ Digit (fromIntegral n)
+  return $ Digit (fromInteger n)
 
 floating :: Parser Expr
 floating = do
@@ -62,17 +62,17 @@ expr = Ex.buildExpressionParser table factor
 
 structExpr :: Parser Struct
 structExpr = do
-  e <- factor
-  return $ ExprList e
+  ex <- factor
+  return $ ExprList ex
 
 struct :: Parser Struct
 struct = try structExpr
      <|> try struct
      <|> try iter
 
-structs :: Parser [Struct]
-structs = many $ do
-  struc <- struct
+structs :: Parser Structs
+structs = do
+  struc <- many struct
   reservedOp ";"
   return struc
 
@@ -99,8 +99,8 @@ program = do
   reserved "program"
   name <- identifier
   reservedOp ":"
-  parStmts <- pars
-  return $ Program name parStmts
+  _pars <- many pars
+  return $ Program name _pars
 
 defn :: Parser Program
 defn = try program
@@ -118,6 +118,12 @@ toplevel = many $ do
     reservedOp "."
     return def
 
+
+parsePar :: String -> Either ParseError Par
+parsePar s = parse (contents parT) "<stdin>" s
+
+parseStruct :: String -> Either ParseError Struct
+parseStruct s = parse (contents struct) "<stdin>" s
 
 parseExpr :: String -> Either ParseError Expr
 parseExpr s = parse (contents expr) "<stdin>" s

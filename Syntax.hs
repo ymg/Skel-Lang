@@ -14,6 +14,7 @@ data Expr
   | Float Double
   | Logic Bool
   | Var String
+  | Exception
   | BinOp Op Expr Expr
   deriving (Eq, Ord, Show)
 
@@ -26,13 +27,12 @@ data Op
 
 data Par
   = Function Name Structs
-  | Par Pars
-  | Farm Integer Pars
+  | Farm Integer Par
   deriving (Eq, Ord, Show)
 
 data Struct
   = ExprList Expr
-  | CompOp Structs Structs
+  | CompOp Structs
   | Iter Integer Structs
   deriving (Eq, Ord, Show)
 
