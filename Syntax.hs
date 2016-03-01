@@ -12,10 +12,10 @@ data Program
 data Expr
   = Digit Integer
   | Float Double
-  | Logic Bool
-  | Var String
-  | Exception
   | BinOp Op Expr Expr
+  | Logic Bool
+  | Var String Expr
+  | Exception
   deriving (Eq, Ord, Show)
 
 data Op
@@ -27,12 +27,13 @@ data Op
 
 data Par
   = Function Name Structs
+  | Par Par
   | Farm Integer Par
   deriving (Eq, Ord, Show)
 
 data Struct
   = ExprList Expr
-  | CompOp Structs
+  | CompOp Struct
   | Iter Integer Structs
   deriving (Eq, Ord, Show)
 

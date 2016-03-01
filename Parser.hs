@@ -20,32 +20,33 @@ table = [[binary "*" Times Ex.AssocLeft,
 pars :: Parser Par
 pars = do
      _par <- parT
-     reservedOp ";"
-     return _par
+--   reservedOp ";"
+     return $ _par
 
 parT :: Parser Par
 parT =  try parFun
     <|> try parFarm
+    <|> try parParallel
 
 parFarm :: Parser Par
 parFarm = do
   reserved "farm"
   num <- integer
-  par <- parT
+  par <- parens $ parT
   return $ Farm num par
 
 parFun :: Parser Par
 parFun = do
   reserved "func"
   name <- identifier
-  struc <- structs
+  struc <- parens $ structs
   return $ Function name struc
 
-parParallel :: Parser Pars
-parParallel = many $ do
-  p <- parT
+parParallel :: Parser Par
+parParallel = do
   reservedOp "||"
-  return p
+  p <- parT
+  return $ Par p
 
 int :: Parser Expr
 int = do
@@ -60,21 +61,27 @@ floating = do
 expr :: Parser Expr
 expr = Ex.buildExpressionParser table factor
 
-structExpr :: Parser Struct
-structExpr = do
+structExprs :: Parser Struct
+structExprs = do
   ex <- factor
   return $ ExprList ex
 
 struct :: Parser Struct
-struct = try structExpr
-     <|> try struct
-     <|> try iter
+struct = try structExprs
+      <|> try structCompOp
+      <|> try iter
+
+structCompOp :: Parser Struct
+structCompOp = do
+    reservedOp "•"
+    _struct <- struct
+    return $ CompOp _struct
 
 structs :: Parser Structs
-structs = do
-  struc <- many struct
-  reservedOp ";"
-  return struc
+structs = many $ do
+       struc <- struct
+--     reservedOp ";"
+       return struc
 
 iter :: Parser Struct
 iter = do
@@ -92,7 +99,9 @@ factor = try floating
 variable :: Parser Expr
 variable = do
   var <- identifier
-  return $ Var var
+  reservedOp "="
+  assign <- try expr <|> try factor
+  return $ Var var assign
 
 program :: Parser Program
 program = do
@@ -100,6 +109,7 @@ program = do
   name <- identifier
   reservedOp ":"
   _pars <- many pars
+  reservedOp "."
   return $ Program name _pars
 
 defn :: Parser Program
@@ -115,7 +125,7 @@ contents p = do
 toplevel :: Parser [Program]
 toplevel = many $ do
     def <- defn
-    reservedOp "."
+--  reservedOp "."
     return def
 
 
