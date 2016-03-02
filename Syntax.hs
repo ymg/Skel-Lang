@@ -12,8 +12,9 @@ data Program
 data Expr
   = Digit Integer
   | Float Double
+  | Bool Bool
+  | String String
   | BinOp Op Expr Expr
-  | Logic Bool
   | Var String Expr
   | Exception
   deriving (Eq, Ord, Show)

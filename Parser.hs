@@ -39,7 +39,7 @@ parFun :: Parser Par
 parFun = do
   reserved "func"
   name <- identifier
-  struc <- parens $ structs
+  struc <- try (parens $ structs) <|> try structs
   return $ Function name struc
 
 parParallel :: Parser Par
@@ -93,14 +93,25 @@ iter = do
 factor :: Parser Expr
 factor = try floating
       <|> try int
+      <|> try bool
+      <|> try str
       <|> variable
       <|> parens expr
+
+str :: Parser Expr
+str = do
+  str <- Lexer.string
+  return $ String str
+
+bool :: Parser Expr
+bool = (Bool True <$ reserved "True")
+    <|> (Bool False <$ reserved "False")
 
 variable :: Parser Expr
 variable = do
   var <- identifier
   reservedOp "="
-  assign <- try expr <|> try factor
+  assign <- try factor <|> try expr
   return $ Var var assign
 
 program :: Parser Program
