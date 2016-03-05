@@ -15,7 +15,8 @@ data Expr
   | Bool Bool
   | String String
   | BinOp Op Expr Expr
-  | Var String Expr
+  | Var String
+  | Assign Exprs
   | Exception
   deriving (Eq, Ord, Show)
 
@@ -33,7 +34,7 @@ data Par
   deriving (Eq, Ord, Show)
 
 data Struct
-  = ExprList Expr
+  = ExprList Exprs
   | CompOp Struct
   | Iter Integer Structs
   deriving (Eq, Ord, Show)

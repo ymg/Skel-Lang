@@ -20,7 +20,6 @@ table = [[binary "*" Times Ex.AssocLeft,
 pars :: Parser Par
 pars = do
      _par <- parT
---   reservedOp ";"
      return $ _par
 
 parT :: Parser Par
@@ -61,9 +60,26 @@ floating = do
 expr :: Parser Expr
 expr = Ex.buildExpressionParser table factor
 
+exprs :: Parser Exprs
+exprs = many1 $ do
+  exprs_ <- try (do
+    reservedOp ","
+    y <- expr
+    return y) <|> 
+    try (do
+      i <- expr
+      return i)
+  return exprs_
+
+{--exprs :: Parser Exprs
+exprs = many1 $ do
+  reservedOp ","
+  exprs_ <- factor
+  return exprs_--}
+
 structExprs :: Parser Struct
 structExprs = do
-  ex <- factor
+  ex <- exprs -- <|> try (many1 factor)
   return $ ExprList ex
 
 struct :: Parser Struct
@@ -80,7 +96,6 @@ structCompOp = do
 structs :: Parser Structs
 structs = many $ do
        struc <- struct
---     reservedOp ";"
        return struc
 
 iter :: Parser Struct
@@ -95,6 +110,7 @@ factor = try floating
       <|> try int
       <|> try bool
       <|> try str
+      <|> try assignmentExpr
       <|> variable
       <|> parens expr
 
@@ -110,9 +126,20 @@ bool = (Bool True <$ reserved "True")
 variable :: Parser Expr
 variable = do
   var <- identifier
+  return $ Var var
+
+{-variable :: Parser Expr
+variable = do
+  var <- identifier
   reservedOp "="
-  assign <- try factor <|> try expr
-  return $ Var var assign
+  assign <- try (many1 expr)
+  return $ Var var assign-}
+
+assignmentExpr :: Parser Expr
+assignmentExpr = do
+  reservedOp "="
+  val <- many $ do expr
+  return $ Assign val
 
 program :: Parser Program
 program = do
@@ -123,9 +150,6 @@ program = do
   reservedOp "."
   return $ Program name _pars
 
-defn :: Parser Program
-defn = try program
-
 contents :: Parser a -> Parser a
 contents p = do
   Tok.whiteSpace lexer
@@ -133,10 +157,9 @@ contents p = do
   eof
   return r
 
-toplevel :: Parser [Program]
-toplevel = many $ do
-    def <- defn
---  reservedOp "."
+toplevel :: Parser Program
+toplevel = do
+    def <- try program
     return def
 
 
@@ -149,5 +172,5 @@ parseStruct s = parse (contents struct) "<stdin>" s
 parseExpr :: String -> Either ParseError Expr
 parseExpr s = parse (contents expr) "<stdin>" s
 
-parseToplevel :: String -> Either ParseError [Program]
+parseToplevel :: String -> Either ParseError Program
 parseToplevel s = parse (contents toplevel) "<stdin>" s
